@@ -1,4 +1,4 @@
-# FireDrones
+# FireDronesRL
 
 FireDrones is a multi-agent reinforcement learning (MARL) project where multiple agents (drones) are trained to manage wildfire in a 2D grid forest. Drones compete and collaborate to extinguish the fire quickly.
 
