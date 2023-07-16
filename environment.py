@@ -60,6 +60,10 @@ class FireDronesEnv(MultiAgentEnv):
             8: [0, 0],
         }
 
+        # Reward and penalty constants
+        self.TIMESTEP_PENALTY = -1
+        self.EXTINGUISH_REWARD = 0.1
+
         # Reset env
         self.reset()
 
@@ -85,14 +89,14 @@ class FireDronesEnv(MultiAgentEnv):
                     self.grid[r][c] = 1
 
         # Reset fires: `num_fires` unique cells are randomly selected and set on fire
-        fire_rows = np.random.choice(
-            range(self.height), size=self.num_fires, replace=False
-        )
-        fire_cols = np.random.choice(
-            range(self.width), size=self.num_fires, replace=False
-        )
-        for r, c in zip(fire_rows, fire_cols):
-            self.grid[r][c] = 2
+        fire_count = 0
+        while fire_count < self.num_fires:
+            r = np.random.choice(range(self.height))  # random num in [0...height-1]
+            c = np.random.choice(range(self.width))  # random num in [0...width-1]
+            # if random cell is a tree, set on fire
+            if self.grid[r][c] == 1:
+                self.grid[r][c] = 2
+                fire_count += 1
 
         # How many timesteps have we done in this episode.
         self.timesteps = 0
@@ -121,11 +125,21 @@ class FireDronesEnv(MultiAgentEnv):
             == 0
         )
 
+        # Update agent positions based on actions
         for agent_id, action in action_dict:
             self._move(agent_id, action)
 
-        # TODO: continue implementation; not done yet!
         # Get observation based on new agent positions
+        observations = self._get_obs()
+
+        # Rewards are updated in _move()
+        rewards = self.agent_rew.copy()
+
+        # Generate a `done` dict (per-agent and total)
+        dones = dict.fromkeys(range(self.num_agents), is_done)
+        dones["__all__"] = is_done
+
+        return observations, rewards, dones, {}
 
     def _get_obs(self):  # must return dict
         """
@@ -153,17 +167,42 @@ class FireDronesEnv(MultiAgentEnv):
         action: int,
     ):
         """
-        Moves `agent_id` from `coords` using given action and returns a resulting events dict:
+        Moves `agent_id` using given action and update its reward for the action taken
         """
 
         # Update position according to action
+        original_pos = self.agent_pos[agent_id][:]
         self.agent_pos[agent_id][0] += self.pos_update_map[action][0]
         self.agent_pos[agent_id][1] += self.pos_update_map[action][1]
+
+        # Solve collisions: agents cannot be in the same cell
+        for aid, pos in self.agent_pos:
+            # if collision, stay in the same place
+            if aid != agent_id and pos == self.agent_pos[agent_id]:
+                self.agent_pos = original_pos
+
+        # Check walls: agents cannot move outside of the grid
+        # adjust row
+        if self.agent_pos[agent_id][0] < 0:
+            self.agent_pos[agent_id][0] = 0
+        elif self.agent_pos[agent_id][0] >= self.height:
+            self.agent_pos[agent_id][0] = self.height - 1
+        # adjust col
+        if self.agent_pos[agent_id][1] < 0:
+            self.agent_pos[agent_id][1] = 0
+        elif self.agent_pos[agent_id][1] >= self.width:
+            self.agent_pos[agent_id][1] = self.width - 1
 
         # Update fire change
         if action == 8:  # spray water action
             # fire extinguished, no more (burnable) tree in cell
             self.grid[self.agent_pos[agent_id][0]][self.agent_pos[agent_id][1]] = 0
+
+            # reward for turning off fire
+            self.agent_rew[agent_id] += self.EXTINGUISH_REWARD
+
+        # time penalty--longer time to turn off all fire -> lower final reward
+        self.agent_rew[agent_id] += self.TIMESTEP_PENALTY
 
     def print_grid(self):
         print(self.grid)
