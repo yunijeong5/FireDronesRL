@@ -1,4 +1,8 @@
 # folders
 .vscode/
 .ipynb_*/
+archive/
 
+
+# files
+test*.py
