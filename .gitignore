@@ -5,4 +5,5 @@ archive/
 
 
 # files
-test*.py
+test*
+tips*
