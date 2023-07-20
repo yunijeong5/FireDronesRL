@@ -16,11 +16,15 @@ from ray.tune.logger import pretty_print
 from ray.tune.registry import register_env
 from ray.rllib.env.multi_agent_env import MultiAgentEnv, make_multi_agent
 
-from multi_env import FireDronesEnv
+from fd_environment import FireDronesEnv
 
 # TODO: test with official example code
-from multiagent import GuessTheNumberGame, MultiAgentCartPole, BasicMultiAgent
-from test_single import GridWorldEnv
+from examples.multiagent_envs import (
+    GuessTheNumberGame,
+    MultiAgentCartPole,
+    BasicMultiAgent,
+)
+from examples.singleagent_env import GridWorldEnv
 
 
 # register_env("test", lambda x: GridWorldEnv())
@@ -58,7 +62,7 @@ env_config = {
     "width": 5,
     "prob_tree_plant": 0.5,  # Probability of each cell being a tree
     "num_fires": 2,  # Fire severity: initial number of trees on fire
-    "prop_fire_spread": 0.3,  # Probability of fire spreading to a negiboring tree
+    "prob_fire_spread": 0.3,  # Probability of fire spreading to a negiboring tree
     "timestep_limit": 100,  # End an episode after this many timesteps
     "num_agents": 3,  # Number of drones
     "agents_vision": 1,  # How far can an agent observe. 1=3x3, 2=5x5, etc.

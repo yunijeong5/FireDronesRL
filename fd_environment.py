@@ -22,9 +22,10 @@ class FireDronesEnv(MultiAgentEnv):
 
         # Fire severity: initial number of trees on fire
         self.num_fires = config.get("num_fires", 5)
+        self.fire_coords = set()
 
         # Probability of fire spreading to a negiboring tree
-        self.prob_fire_spread = config.get("prop_fire_spread", 0.3)
+        self.prob_fire_spread = config.get("prob_fire_spread", 0.3)
 
         # End an episode after this many timesteps
         self.timestep_limit = config.get("timestep_limit", 100)
@@ -32,21 +33,24 @@ class FireDronesEnv(MultiAgentEnv):
         # Number of drones
         self.num_agents = config.get("num_agents", 5)
         self._agent_ids = set(range(self.num_agents))
+        self.agent_pos = {}  # agent positions
+        self.agent_rew = {}  # accumulated rewards in this episode
 
         # How far each agents can see
         # 1=3x3 square with agent in the middle, 2=5x5 square with agent in the middle
         self.agents_vision = config.get("agents_vision", 1)
 
-        # observation = location(me) + status(visible cells around me) # TODO: sanity check; should the agent know each other's locations
+        # observation = location(me) + status(visible cells around me)
         # Ditched "global view", aka all location of fires, bc state space would explode
-        # location(agents): row_pos, col_pos
+        # location(agents): coordinate on grid--row_pos, col_pos
         # status(neiboring cells): 0=empty, 1=tree, 2=fire, +3 for each drone in the cell (e.g. 6=empty+2 drones; 11: fire+3 drones)
         # Flattened from top-left to bottom-right
         # possible change chain for each init status:
         # 0->[0|3], 1->[1|2|4], 2->[0|2|5], 3->[0|3], 4->[1|4|5], 5->[0|2|3|5]
 
         num_visible_cells = (self.agents_vision * 2 + 1) ** 2
-        # 2 + 3 * self.num_agents: largest status number (fire + all agents in this cell); 1: for the case where the cell is out of grid (NA)
+        # 2 + 3 * self.num_agents: largest status number (fire + all agents in this cell);
+        # 1: for the case where the cell is out of grid (e.g. when drone is at the grid's edges)
         self.CELL_OUTSIDE = (
             2 + 3 * self.num_agents + 1
         )  # code for cells outside grid but in 'visible range'
@@ -59,27 +63,19 @@ class FireDronesEnv(MultiAgentEnv):
         )
 
         # Agent actions
-        # 0=N (up), 1=NE, 2=E (right), 3=SE, 4=S (down), 5=SW, 6=W (left), 7=NW, 8=spray water
+        # 0=NW, 1=N (up), 2=NE, 3=W (left), 4=spray water (center), 5=E (right), 6=SW, 7=S (down), 8=SE
         self.action_space = Dict({i: Discrete(9) for i in range(self.num_agents)})
 
-        # print("SAMPLE", self.action_space.sample())
-        self.pos_update_map = {  # action number : [row change, col change]
-            0: [-1, 0],
-            1: [-1, 1],
-            2: [0, 1],
-            3: [1, 1],
-            4: [1, 0],
-            5: [1, -1],
-            6: [0, -1],
-            7: [-1, -1],
-            8: [0, 0],
-        }
+        self.pos_update_map = {}  # action number : [row change, col change]
+        agent_id = 0
+        for i in range(-1, 2):
+            for j in range(-1, 2):
+                self.pos_update_map[agent_id] = np.array([i, j])
+                agent_id += 1
 
         # Reward and penalty constants
         self.TIMESTEP_PENALTY = -1
         self.EXTINGUISH_REWARD = 0.1
-
-        # self.reset()
 
     def reset(self, *, seed=None, options=None):
         """Returns initial observation of next episode."""
@@ -87,7 +83,7 @@ class FireDronesEnv(MultiAgentEnv):
         # Note: This call to super does NOT return anything.
         super().reset(seed=seed)
 
-        # Clear grid
+        # Reset grid
         self.grid = np.zeros(shape=(self.height, self.width))
 
         # Reset trees: on each cell, trees are planted with `prob_tree_plant`
@@ -97,24 +93,24 @@ class FireDronesEnv(MultiAgentEnv):
                     self.grid[r, c] = 1
 
         # Reset fires: `num_fires` unique cells are randomly selected and set on fire
+        self.fire_coords = set()  # empty set
         fire_count = 0
         while fire_count < self.num_fires:
             r = np.random.choice(range(self.height))  # random num in [0...height-1]
             c = np.random.choice(range(self.width))  # random num in [0...width-1]
             # if a cell's base is tree, set on fire
-            if self.grid[r, c] % 3 == 1:
+            if self._is_tree(self.grid[r, c]):
                 self.grid[r, c] += 1
                 fire_count += 1
+                self.fire_coords.add((r, c))
 
-        # Agent positions
+        # Reset positions and rewards
         self.agent_pos = {}
-
-        # Accumulated rewards in this episode
         self.agent_rew = {}
 
         for i in range(self.num_agents):
             # all start from the same cell (e.g. drone storage center)
-            self.agent_pos[i] = [0, 0]  # upper left is chosen arbitraryly
+            self.agent_pos[i] = np.array([0, 0])  # upper left is chosen arbitraryly
 
             # reset rewards
             self.agent_rew[i] = 0
@@ -152,13 +148,25 @@ class FireDronesEnv(MultiAgentEnv):
         # Rewards are updated in _move()
         rewards = self.agent_rew.copy()
 
-        # Generate a `done` dict (per-agent and total)
+        # Generate a `terminated` dict (per-agent and total)
         dones = dict.fromkeys(range(self.num_agents), is_done)
         dones["__all__"] = is_done
 
+        # TODO: delete later
         time.sleep(0.5)
 
-        # TODO: update fire spread
+        # Fire can spread to its neighboring (8) trees with probability `prop_fire_spread`
+        for fr, fc in self.fire_coords:
+            neighbor_row = self._get_valid_range(fr, 1, True)
+            neighbor_col = self._get_valid_range(fc, 1, False)
+            for nr in neighbor_row:
+                for nc in neighbor_col:
+                    if self._is_tree(self.grid[nr, nc]):
+                        if random.uniform(0, 1) <= self.prob_fire_spread:
+                            self.grid[nr, nc] += 1
+                            self.fire_coords.add((nr, nc))
+
+        # TODO: Generate a `truncated` dict (per-agent and total)
 
         return (
             observations,
@@ -166,21 +174,33 @@ class FireDronesEnv(MultiAgentEnv):
             dones,
             dones.copy(),
             {},
-        )  # TODO: ValueError: The number of values returned from `gym.Env.step([action])` must be 5 (new gym.Env API including `truncated` flags)! Make sure your `step()` method returns: [obs], [reward], [terminated], [truncated], and [infos]!
+        )  # TODO: [obs], [reward], [terminated], [truncated], [infos]
+
+    def _is_tree(self, cell_state):
+        return cell_state % 3 == 1
+
+    def _is_fire(self, cell_state):
+        return cell_state % 3 == 2
+
+    def _get_valid_range(self, pos: int, vision: int, is_row: bool):
+        if is_row:
+            return range(
+                max(0, pos - vision),
+                min(self.height - 1, pos + vision) + 1,
+            )
+        else:
+            return range(
+                max(0, pos - vision),
+                min(self.width - 1, pos + vision) + 1,
+            )
 
     def _get_surroundings(self, my_row: int, my_col: int):
         """
         Returns flattened (1D) status codes of surrounding grid cells based on `self.agent_vision`
         """
         agent_obs = [my_row, my_col]
-        valid_row = range(
-            max(0, my_row - self.agents_vision),
-            min(self.height - 1, my_row + self.agents_vision) + 1,
-        )
-        valid_col = range(
-            max(0, my_col - self.agents_vision),
-            min(self.width - 1, my_col + self.agents_vision) + 1,
-        )
+        valid_row = self._get_valid_range(my_row, self.agents_vision, True)
+        valid_col = self._get_valid_range(my_col, self.agents_vision, False)
 
         for r in range(my_row - self.agents_vision, my_row + self.agents_vision + 1):
             for c in range(
@@ -189,7 +209,7 @@ class FireDronesEnv(MultiAgentEnv):
                 if r in valid_row and c in valid_col:
                     agent_obs.append(self.grid[r, c])
                 else:
-                    agent_obs.append(self.CELL_OUTSIDE)  # TODO: sanity check
+                    agent_obs.append(self.CELL_OUTSIDE)
 
         return agent_obs
 
@@ -219,13 +239,14 @@ class FireDronesEnv(MultiAgentEnv):
         self.agent_rew[agent_id] += self.TIMESTEP_PENALTY
 
         # Update fire change
-        if (
-            action == 8
-            and self.grid[self.agent_pos[agent_id][0], self.agent_pos[agent_id][1]] % 3
-            == 2
+        if action == 4 and self._is_fire(
+            self.grid[self.agent_pos[agent_id][0], self.agent_pos[agent_id][1]]
         ):  # spray water action
             # fire extinguished, no more (burnable) tree in cell
             self.grid[self.agent_pos[agent_id][0], self.agent_pos[agent_id][1]] -= 2
+            self.fire_coords.remove(
+                (self.agent_pos[agent_id][0], self.agent_pos[agent_id][1])
+            )
 
             # reward for turning off fire
             self.agent_rew[agent_id] += self.EXTINGUISH_REWARD

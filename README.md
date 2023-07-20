@@ -1,14 +1,13 @@
 # FireDronesRL
 
-FireDrones is a multi-agent reinforcement learning (MARL) project where multiple agents (drones) are trained to manage wildfire in a 2D grid forest. Drones compete and collaborate to extinguish the fire quickly.
+FireDrones is a multi-agent reinforcement learning (MARL) project where multiple agents (drones) are trained to manage wildfire in a 2D grid forest. Drones have local view of grid and collaborate to extinguish the fire quickly.
 
-I hope this project can be used as an example MARL project for beginners in MARL or RLlib.
+### Motivation
 
-| :exclamation: This project used Ray 2.5.1. Using other versions may cause error |
-| ------------------------------------------------------------------------------- |
+I hope this project can be used as an example MARL project for beginners in MARL or RLlib. RLlib is undergoing active development, and many existing tutorials online does not accurately reflect the latest version of the library and often includes deprecated code that would cause error.
 
-> **Warning**
-> This project used Ray 2.5.1. Using other versions may cause error
+> **Note**
+> This project used Ray 2.5.1 and Gymnasium 0.26.3. Using other versions (especially Ray) may cause error.
 
 ## Problem Description
 
@@ -33,8 +32,8 @@ I hope this project can be used as an example MARL project for beginners in MARL
 
 This project uses the following libraries:
 
--   RLlib (add hyperlink)
--   Gymnasium (add hyperlink)
+-   [Ray RLlib](https://docs.ray.io/en/latest/rllib/index.html)
+-   [Gymnasium](https://gymnasium.farama.org/)
 
 ## Installation
 
@@ -63,7 +62,8 @@ Here are some additional considerations that can be incoorporated to create more
 
 ## Useful Tutorials
 
--   Outdated but explains MultiAgentEnv well.
-    https://github.com/sven1977/rllib_tutorials/blob/main/ray_summit_2021/tutorial_notebook.ipynb
-
 -   [MultiAgentEnv implementation](https://docs.ray.io/en/latest/_modules/ray/rllib/env/multi_agent_env.html#main-content): The comments are very descriptive and helpful
+
+-   [Example codes found online](./examples/)
+
+-   [Outdated a bit but explains MultiAgentEnv well](https://github.com/sven1977/rllib_tutorials/blob/main/ray_summit_2021/tutorial_notebook.ipynb)
