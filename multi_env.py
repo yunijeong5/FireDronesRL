@@ -1,6 +1,6 @@
-from gymnasium.spaces import Discrete, MultiDiscrete
+from gymnasium.spaces import Discrete, MultiDiscrete, Dict
 import numpy as np
-import random
+import random, time
 
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
@@ -54,11 +54,14 @@ class FireDronesEnv(MultiAgentEnv):
             [self.CELL_OUTSIDE + 1] * num_visible_cells
         )  # +1 because Discrete's number range is 0...n-1
 
-        self.observation_space = MultiDiscrete(state)
+        self.observation_space = Dict(
+            {i: MultiDiscrete(state) for i in range(self.num_agents)}
+        )
 
         # Agent actions
         # 0=N (up), 1=NE, 2=E (right), 3=SE, 4=S (down), 5=SW, 6=W (left), 7=NW, 8=spray water
-        self.action_space = Discrete(9)
+        self.action_space = Dict({i: Discrete(9) for i in range(self.num_agents)})
+
         # print("SAMPLE", self.action_space.sample())
         self.pos_update_map = {  # action number : [row change, col change]
             0: [-1, 0],
@@ -153,6 +156,8 @@ class FireDronesEnv(MultiAgentEnv):
         dones = dict.fromkeys(range(self.num_agents), is_done)
         dones["__all__"] = is_done
 
+        time.sleep(0.5)
+
         # TODO: update fire spread
 
         return (
@@ -195,7 +200,7 @@ class FireDronesEnv(MultiAgentEnv):
         """
         obs = {}
         for agent_id, (row, col) in self.agent_pos.items():
-            obs[agent_id] = np.array(self._get_surroundings(row, col))
+            obs[agent_id] = np.array(self._get_surroundings(row, col), dtype=np.int64)
 
         # print("Observation ", obs)
         self.render()
@@ -214,7 +219,11 @@ class FireDronesEnv(MultiAgentEnv):
         self.agent_rew[agent_id] += self.TIMESTEP_PENALTY
 
         # Update fire change
-        if action == 8:  # spray water action
+        if (
+            action == 8
+            and self.grid[self.agent_pos[agent_id][0], self.agent_pos[agent_id][1]] % 3
+            == 2
+        ):  # spray water action
             # fire extinguished, no more (burnable) tree in cell
             self.grid[self.agent_pos[agent_id][0], self.agent_pos[agent_id][1]] -= 2
 

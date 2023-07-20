@@ -4,6 +4,9 @@ FireDrones is a multi-agent reinforcement learning (MARL) project where multiple
 
 I hope this project can be used as an example MARL project for beginners in MARL or RLlib.
 
+| :exclamation: This project used Ray 2.5.1. Using other versions may cause error |
+| ------------------------------------------------------------------------------- |
+
 ## Problem Description
 
 **Environment Initialization and Updates**: 10 by 10 grid. On each cell, a tree grows with probability X, and fire ignites on K trees. At each time stamp, fire spreads to a neighboring (8 surrounding cells) with probability Y.
@@ -57,10 +60,7 @@ Here are some additional considerations that can be incoorporated to create more
 
 ## Useful Tutorials
 
-https://github.com/sven1977/rllib_tutorials/blob/main/ray_summit_2021/tutorial_notebook.ipynb
+-   Outdated but explains MultiAgentEnv well.
+    https://github.com/sven1977/rllib_tutorials/blob/main/ray_summit_2021/tutorial_notebook.ipynb
 
-^Outdated but explains MultiAgentEnv well.
-
-https://gymnasium.farama.org/tutorials/gymnasium_basics/environment_creation/
-
-^How to make custom env in Gymnasium
+-   [MultiAgentEnv implementation](https://docs.ray.io/en/latest/_modules/ray/rllib/env/multi_agent_env.html#main-content): The comments are very descriptive and helpful

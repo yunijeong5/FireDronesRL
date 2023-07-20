@@ -23,24 +23,24 @@ from multiagent import GuessTheNumberGame, MultiAgentCartPole, BasicMultiAgent
 from test_single import GridWorldEnv
 
 
-register_env("test", lambda x: GridWorldEnv())
-register_env("basic", lambda x: BasicMultiAgent())
+# register_env("test", lambda x: GridWorldEnv())
+# register_env("basic", lambda x: BasicMultiAgent())
 
 
-algo = PPOConfig().environment(env="basic").build()
-result = algo.train()
-print(pretty_print(result))
+# algo = PPOConfig().environment(env="basic").build()
+# result = algo.train()
+# print(pretty_print(result))
 
-exit()
+# exit()
 
-for i in range(10):
-    result = algo.train()
-    print(pretty_print(result))
-    if i % 5 == 0:
-        checkpoint_dir = algo.save()
-        print(f"checkpoint saved in directory {checkpoint_dir}")
+# for i in range(10):
+#     result = algo.train()
+#     print(pretty_print(result))
+#     if i % 5 == 0:
+#         checkpoint_dir = algo.save()
+#         print(f"checkpoint saved in directory {checkpoint_dir}")
 
-exit()
+# exit()
 
 
 # Start a new instance of Ray (when running this locally) or
