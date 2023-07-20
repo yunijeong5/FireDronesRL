@@ -1,14 +1,14 @@
-import gymnasium
 from gymnasium.spaces import Discrete, MultiDiscrete
 import numpy as np
 import random
-import time
 
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
 
 class FireDronesEnv(MultiAgentEnv):
     def __init__(self, config=None):
+        super().__init__()
+
         config = config or {}
         # Dimentions of the grid
         self.height = config.get("height", 10)  # number of rows
@@ -31,6 +31,7 @@ class FireDronesEnv(MultiAgentEnv):
 
         # Number of drones
         self.num_agents = config.get("num_agents", 5)
+        self._agent_ids = set(range(self.num_agents))
 
         # How far each agents can see
         # 1=3x3 square with agent in the middle, 2=5x5 square with agent in the middle
@@ -58,6 +59,7 @@ class FireDronesEnv(MultiAgentEnv):
         # Agent actions
         # 0=N (up), 1=NE, 2=E (right), 3=SE, 4=S (down), 5=SW, 6=W (left), 7=NW, 8=spray water
         self.action_space = Discrete(9)
+        # print("SAMPLE", self.action_space.sample())
         self.pos_update_map = {  # action number : [row change, col change]
             0: [-1, 0],
             1: [-1, 1],
@@ -74,11 +76,17 @@ class FireDronesEnv(MultiAgentEnv):
         self.TIMESTEP_PENALTY = -1
         self.EXTINGUISH_REWARD = 0.1
 
-        # # Reset env
         # self.reset()
 
-    def reset(self):
+    def reset(self, *, seed=None, options=None):
         """Returns initial observation of next episode."""
+        # Call super's `reset()` method to set the np_random with the value of `seed`.
+        # Note: This call to super does NOT return anything.
+        super().reset(seed=seed)
+
+        # Clear grid
+        self.grid = np.zeros(shape=(self.height, self.width))
+
         # Reset trees: on each cell, trees are planted with `prob_tree_plant`
         for r in range(self.height):
             for c in range(self.width):
@@ -115,7 +123,7 @@ class FireDronesEnv(MultiAgentEnv):
         self.timesteps = 0
 
         # Return the initial observation in the new episode.
-        return self._get_obs()
+        return self._get_obs(), {}  # [obs] [infos]
 
     def step(self, action_dict: dict):
         """
@@ -124,7 +132,7 @@ class FireDronesEnv(MultiAgentEnv):
         e.g.
         `action={"agent1": action_for_agent1, "agent2": action_for_agent2}`
         """
-
+        print("ACTION Dict", action_dict)
         # increase time step counter by 1
         self.timesteps += 1
 
@@ -145,7 +153,15 @@ class FireDronesEnv(MultiAgentEnv):
         dones = dict.fromkeys(range(self.num_agents), is_done)
         dones["__all__"] = is_done
 
-        return observations, rewards, dones, {}
+        # TODO: update fire spread
+
+        return (
+            observations,
+            rewards,
+            dones,
+            dones.copy(),
+            {},
+        )  # TODO: ValueError: The number of values returned from `gym.Env.step([action])` must be 5 (new gym.Env API including `truncated` flags)! Make sure your `step()` method returns: [obs], [reward], [terminated], [truncated], and [infos]!
 
     def _get_surroundings(self, my_row: int, my_col: int):
         """
@@ -181,6 +197,8 @@ class FireDronesEnv(MultiAgentEnv):
         for agent_id, (row, col) in self.agent_pos.items():
             obs[agent_id] = np.array(self._get_surroundings(row, col))
 
+        # print("Observation ", obs)
+        self.render()
         return obs
 
     def _move(
@@ -254,7 +272,7 @@ class FireDronesEnv(MultiAgentEnv):
             print()
 
 
-env = FireDronesEnv()
-print(env.reset())
-env.render()
+# env = FireDronesEnv()
+# print(env.reset())
+# env.render()
 # observations, rewards, dones, infos = env.step(action={...})

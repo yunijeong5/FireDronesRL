@@ -58,3 +58,9 @@ Here are some additional considerations that can be incoorporated to create more
 ## Useful Tutorials
 
 https://github.com/sven1977/rllib_tutorials/blob/main/ray_summit_2021/tutorial_notebook.ipynb
+
+^Outdated but explains MultiAgentEnv well.
+
+https://gymnasium.farama.org/tutorials/gymnasium_basics/environment_creation/
+
+^How to make custom env in Gymnasium
