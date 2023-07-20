@@ -7,6 +7,9 @@ I hope this project can be used as an example MARL project for beginners in MARL
 | :exclamation: This project used Ray 2.5.1. Using other versions may cause error |
 | ------------------------------------------------------------------------------- |
 
+> **Warning**
+> This project used Ray 2.5.1. Using other versions may cause error
+
 ## Problem Description
 
 **Environment Initialization and Updates**: 10 by 10 grid. On each cell, a tree grows with probability X, and fire ignites on K trees. At each time stamp, fire spreads to a neighboring (8 surrounding cells) with probability Y.
