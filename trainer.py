@@ -74,7 +74,7 @@ env_config = {
 algo = (
     PPOConfig()
     .rollouts(num_rollout_workers=0)
-    # .resources(num_gpus=0)
+    .resources(num_gpus=0)
     .environment(env="fire_drones", env_config=env_config)
     .build()
 )

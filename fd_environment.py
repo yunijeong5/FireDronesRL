@@ -4,9 +4,15 @@ import random, time
 
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
+################
+# TODO: Figure out why map changes after 2 render() is called. Seems like init is called once... so why?
+
+################
+
 
 class FireDronesEnv(MultiAgentEnv):
     def __init__(self, config=None):
+        print("🤖INIT CALLED")
         super().__init__()
 
         config = config or {}
@@ -40,6 +46,9 @@ class FireDronesEnv(MultiAgentEnv):
         # 1=3x3 square with agent in the middle, 2=5x5 square with agent in the middle
         self.agents_vision = config.get("agents_vision", 1)
 
+        # Action and observation spaces map from agent ids to spacesfor the individual agents.
+        ######################################################################################
+        # Observation space
         # observation = location(me) + status(visible cells around me)
         # Ditched "global view", aka all location of fires, bc state space would explode
         # location(agents): coordinate on grid--row_pos, col_pos
@@ -47,7 +56,6 @@ class FireDronesEnv(MultiAgentEnv):
         # Flattened from top-left to bottom-right
         # possible change chain for each init status:
         # 0->[0|3], 1->[1|2|4], 2->[0|2|5], 3->[0|3], 4->[1|4|5], 5->[0|2|3|5]
-
         num_visible_cells = (self.agents_vision * 2 + 1) ** 2
         # 2 + 3 * self.num_agents: largest status number (fire + all agents in this cell);
         # 1: for the case where the cell is out of grid (e.g. when drone is at the grid's edges)
@@ -57,12 +65,11 @@ class FireDronesEnv(MultiAgentEnv):
         state = [self.height, self.width] + (
             [self.CELL_OUTSIDE + 1] * num_visible_cells
         )  # +1 because Discrete's number range is 0...n-1
-
         self.observation_space = Dict(
             {i: MultiDiscrete(state) for i in range(self.num_agents)}
         )
 
-        # Agent actions
+        # Action space
         # 0=NW, 1=N (up), 2=NE, 3=W (left), 4=spray water (center), 5=E (right), 6=SW, 7=S (down), 8=SE
         self.action_space = Dict({i: Discrete(9) for i in range(self.num_agents)})
 
@@ -82,6 +89,8 @@ class FireDronesEnv(MultiAgentEnv):
         # Call super's `reset()` method to set the np_random with the value of `seed`.
         # Note: This call to super does NOT return anything.
         super().reset(seed=seed)
+
+        print("🤖RESET CALLED")
 
         # Reset grid
         self.grid = np.zeros(shape=(self.height, self.width))
@@ -126,12 +135,12 @@ class FireDronesEnv(MultiAgentEnv):
 
     def step(self, action_dict: dict):
         """
-        Returns (next observation, rewards, dones, infos) after having taken the given actions.
+        Returns (next observation, rewards, terminateds, truncateds, infos) after having taken the given actions.
 
         e.g.
-        `action={"agent1": action_for_agent1, "agent2": action_for_agent2}`
+        `action_dict={0: action_for_agent0, 1: action_for_agent1, ...}`
         """
-        print("ACTION Dict", action_dict)
+        print("🤖STEP(): ACTION Dict", action_dict)
         # increase time step counter by 1
         self.timesteps += 1
 
@@ -148,15 +157,15 @@ class FireDronesEnv(MultiAgentEnv):
         # Rewards are updated in _move()
         rewards = self.agent_rew.copy()
 
-        # Generate a `terminated` dict (per-agent and total)
-        dones = dict.fromkeys(range(self.num_agents), is_done)
-        dones["__all__"] = is_done
+        # Generate a `terminateds` dict (per-agent and total)
+        terminateds = dict.fromkeys(range(self.num_agents), is_done)
+        terminateds["__all__"] = is_done
 
         # TODO: delete later
         time.sleep(0.5)
 
         # Fire can spread to its neighboring (8) trees with probability `prop_fire_spread`
-        for fr, fc in self.fire_coords:
+        for fr, fc in self.fire_coords.copy():
             neighbor_row = self._get_valid_range(fr, 1, True)
             neighbor_col = self._get_valid_range(fc, 1, False)
             for nr in neighbor_row:
@@ -165,16 +174,21 @@ class FireDronesEnv(MultiAgentEnv):
                         if random.uniform(0, 1) <= self.prob_fire_spread:
                             self.grid[nr, nc] += 1
                             self.fire_coords.add((nr, nc))
+                            print("🤖Fire spread!")
 
-        # TODO: Generate a `truncated` dict (per-agent and total)
+        # Generate a `truncateds` dict (per-agent and total); same as terminated
+        truncateds = terminateds.copy()
+
+        # Generate `infos` dict per agent
+        infos = {i: {} for i in range(self.num_agents)}
 
         return (
             observations,
             rewards,
-            dones,
-            dones.copy(),
-            {},
-        )  # TODO: [obs], [reward], [terminated], [truncated], [infos]
+            terminateds,
+            truncateds,
+            infos,
+        )
 
     def _is_tree(self, cell_state):
         return cell_state % 3 == 1
@@ -250,6 +264,7 @@ class FireDronesEnv(MultiAgentEnv):
 
             # reward for turning off fire
             self.agent_rew[agent_id] += self.EXTINGUISH_REWARD
+            print("🤖Fire extinguished!")
 
             # No need to move for action 8
             return

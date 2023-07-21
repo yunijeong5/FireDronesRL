@@ -17,7 +17,7 @@ I hope this project can be used as an example MARL project for beginners in MARL
 
 **State**:
 
-**Action**: At time $t$, a drone can move one cell in one of the eight directions (N, NE, E,...), or spray water (=extinguish fire) if the fire cell is one of its neighboring cells. Drone can enter fire cells (flies over fire).
+**Action**: At time $t$, a drone can move one cell in one of the eight directions (N, NE, E,..., NW), or spray water (=extinguish fire) in its current cell if it's on fire. Drones can enter fire cells and multiple drones may present at the same cell.
 
 **Reward**:
 +: extinguished fire
@@ -25,8 +25,6 @@ I hope this project can be used as an example MARL project for beginners in MARL
 -> might wait to have enough trees to be set on fire. remove +?
 -> How to reward individual robot's activity?
 ->
-
-**Assumptions**: $s_t$ (state at time $t$) is fully known
 
 ## Requirements
 
@@ -66,4 +64,4 @@ Here are some additional considerations that can be incoorporated to create more
 
 -   [Example codes found online](./examples/)
 
--   [Outdated a bit but explains MultiAgentEnv well](https://github.com/sven1977/rllib_tutorials/blob/main/ray_summit_2021/tutorial_notebook.ipynb)
+-   [Ray Summit 2021 tutorial: a bit outdated but explains MultiAgentEnv well](https://github.com/sven1977/rllib_tutorials/blob/main/ray_summit_2021/tutorial_notebook.ipynb)

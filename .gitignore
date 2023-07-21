@@ -3,6 +3,7 @@
 .ipynb_*/
 archive/
 test*/
+__pycache__/
 
 
 # files
