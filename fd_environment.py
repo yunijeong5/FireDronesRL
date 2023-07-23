@@ -6,6 +6,7 @@ from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
 ################
 # TODO: Figure out why map changes after 2 render() is called. Seems like init is called once... so why?
+# idk, but it should be fine... Just premature reset.
 
 ################
 
@@ -88,9 +89,9 @@ class FireDronesEnv(MultiAgentEnv):
         """Returns initial observation of next episode."""
         # Call super's `reset()` method to set the np_random with the value of `seed`.
         # Note: This call to super does NOT return anything.
-        super().reset(seed=seed)
+        # super().reset(seed=seed)
 
-        print("🤖RESET CALLED")
+        print("🟢 RESET CALLED")
 
         # Reset grid
         self.grid = np.zeros(shape=(self.height, self.width))
@@ -140,12 +141,12 @@ class FireDronesEnv(MultiAgentEnv):
         e.g.
         `action_dict={0: action_for_agent0, 1: action_for_agent1, ...}`
         """
-        print("🤖STEP(): ACTION Dict", action_dict)
+        print("🤖 STEP(): ACTION Dict", action_dict)
         # increase time step counter by 1
         self.timesteps += 1
 
         # An episode is done when we reach the time step limit or when there's no more fire
-        is_done = self.timesteps >= self.timestep_limit or np.all(self.grid % 3 == 2)
+        is_done = self.timesteps >= self.timestep_limit or np.all(self.grid % 3 != 2)
 
         # Update agent positions based on actions
         for agent_id, action in action_dict.items():
@@ -174,13 +175,15 @@ class FireDronesEnv(MultiAgentEnv):
                         if random.uniform(0, 1) <= self.prob_fire_spread:
                             self.grid[nr, nc] += 1
                             self.fire_coords.add((nr, nc))
-                            print("🤖Fire spread!")
+                            print("🔥 Fire spread!")
 
         # Generate a `truncateds` dict (per-agent and total); same as terminated
         truncateds = terminateds.copy()
 
         # Generate `infos` dict per agent
         infos = {i: {} for i in range(self.num_agents)}
+
+        print("📢 TERMINATED DICT", terminateds)
 
         return (
             observations,
@@ -264,7 +267,7 @@ class FireDronesEnv(MultiAgentEnv):
 
             # reward for turning off fire
             self.agent_rew[agent_id] += self.EXTINGUISH_REWARD
-            print("🤖Fire extinguished!")
+            print("💧Fire extinguished!")
 
             # No need to move for action 8
             return
