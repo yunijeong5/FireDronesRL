@@ -8,12 +8,21 @@ from ray.rllib.env.multi_agent_env import MultiAgentEnv
 # TODO: Figure out why map changes after 2 render() is called. Seems like init is called once... so why?
 # idk, but it should be fine... Just premature reset.
 
+# Should I use single policy or multi policy? Each agent's task is pretty much the same so single?
+
 ################
+
+PRINT_PROCESS = False
+
+
+def my_print(*args, **kwargs):
+    if PRINT_PROCESS:
+        print(*args, **kwargs)
 
 
 class FireDronesEnv(MultiAgentEnv):
     def __init__(self, config=None):
-        print("🤖INIT CALLED")
+        my_print("🤖INIT CALLED")
         super().__init__()
 
         config = config or {}
@@ -91,7 +100,7 @@ class FireDronesEnv(MultiAgentEnv):
         # Note: This call to super does NOT return anything.
         # super().reset(seed=seed)
 
-        print("🟢 RESET CALLED")
+        my_print("🟢 RESET CALLED")
 
         # Reset grid
         self.grid = np.zeros(shape=(self.height, self.width))
@@ -141,7 +150,7 @@ class FireDronesEnv(MultiAgentEnv):
         e.g.
         `action_dict={0: action_for_agent0, 1: action_for_agent1, ...}`
         """
-        print("🤖 STEP(): ACTION Dict", action_dict)
+        my_print("🤖 STEP(): ACTION Dict", action_dict)
         # increase time step counter by 1
         self.timesteps += 1
 
@@ -163,7 +172,8 @@ class FireDronesEnv(MultiAgentEnv):
         terminateds["__all__"] = is_done
 
         # TODO: delete later
-        time.sleep(0.5)
+        if PRINT_PROCESS:
+            time.sleep(0.5)
 
         # Fire can spread to its neighboring (8) trees with probability `prop_fire_spread`
         for fr, fc in self.fire_coords.copy():
@@ -175,7 +185,7 @@ class FireDronesEnv(MultiAgentEnv):
                         if random.uniform(0, 1) <= self.prob_fire_spread:
                             self.grid[nr, nc] += 1
                             self.fire_coords.add((nr, nc))
-                            print("🔥 Fire spread!")
+                            my_print("🔥 Fire spread!")
 
         # Generate a `truncateds` dict (per-agent and total); same as terminated
         truncateds = terminateds.copy()
@@ -183,7 +193,10 @@ class FireDronesEnv(MultiAgentEnv):
         # Generate `infos` dict per agent
         infos = {i: {} for i in range(self.num_agents)}
 
-        print("📢 TERMINATED DICT", terminateds)
+        my_print("📢 TERMINATED DICT", terminateds)
+
+        if terminateds["__all__"]:
+            print(rewards)
 
         return (
             observations,
@@ -239,7 +252,7 @@ class FireDronesEnv(MultiAgentEnv):
         for agent_id, (row, col) in self.agent_pos.items():
             obs[agent_id] = np.array(self._get_surroundings(row, col), dtype=np.int64)
 
-        # print("Observation ", obs)
+        # my_print("Observation ", obs)
         self.render()
         return obs
 
@@ -267,7 +280,7 @@ class FireDronesEnv(MultiAgentEnv):
 
             # reward for turning off fire
             self.agent_rew[agent_id] += self.EXTINGUISH_REWARD
-            print("💧Fire extinguished!")
+            my_print("💧Fire extinguished!")
 
             # No need to move for action 8
             return
@@ -305,19 +318,19 @@ class FireDronesEnv(MultiAgentEnv):
 
         # Super simple implementation for quick checks
         # ⬛⬜🟩🟥🌲🔥🤖
-        print(self.grid)
+        my_print(self.grid)
         for r in range(self.height):
             for c in range(self.width):
                 status = self.grid[r][c]
                 if status == 0:
-                    print("⬛", end="")
+                    my_print("⬛", end="")
                 elif status == 1:
-                    print("🟩", end="")
+                    my_print("🟩", end="")
                 elif status == 2:
-                    print("🟥", end="")
+                    my_print("🟥", end="")
                 elif status > 2:
-                    print("⬜", end="")
-            print()
+                    my_print("⬜", end="")
+            my_print()
 
 
 # env = FireDronesEnv()

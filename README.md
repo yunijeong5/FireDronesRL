@@ -35,6 +35,14 @@ This project uses the following libraries:
 
 ## Installation
 
+```
+conda create -n rllib
+conda activate rllib
+conda install -c conda-forge "ray-rllib"
+```
+
+To see how to install Anaconda, see [here](https://docs.anaconda.com/free/anaconda/install/).
+
 ## How to Run
 
 (insert instruction)
@@ -46,6 +54,23 @@ This project uses the following libraries:
 `environment.py`: Defines the wildfire model environment
 
 ## Results
+
+Let's set up a separate conda environment to visualizie training process with Tensorboard:
+
+```
+conda create -n tb-rllib
+conda activate tb-rllib
+pip install ray[rllib]
+conda install chardet markdown requests tensorboard protobuf=3.20.3
+```
+
+A new conda environment is used because libraries needed to run Tensorboard causes conflict in `trainer.py`.
+
+After running `trainer.py`, follow the steps below:
+
+1. Go to ~/ray*results/PPO/PPO_MultiAgentArena*[some key]00000*0[date]*[time]/
+2. In that directory, you should see a event.out.... file.
+3. Run `tensorboard --logdir .` and head to https://localhost:6006 in your browser.
 
 ## Extending the Project
 

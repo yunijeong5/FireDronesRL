@@ -10,53 +10,21 @@ using the FireDronesEnv class
 # action spaces and model types and b/c it learns well almost any problem.
 import ray
 from ray.rllib.algorithms.ppo import PPOConfig
+
+# from ray import tune
 from ray.tune.logger import pretty_print
-
-# from ray import air, tune
 from ray.tune.registry import register_env
-from ray.rllib.env.multi_agent_env import MultiAgentEnv, make_multi_agent
 
-from fd_environment import FireDronesEnv
+from environment import FireDronesEnv
 
-# TODO: test with official example code
-from examples.multiagent_envs import (
-    GuessTheNumberGame,
-    MultiAgentCartPole,
-    BasicMultiAgent,
-)
-from examples.singleagent_env import GridWorldEnv
-
-
-# register_env("test", lambda x: GridWorldEnv())
-# register_env("basic", lambda x: BasicMultiAgent())
-
-
-# algo = PPOConfig().environment(env="basic").build()
-# result = algo.train()
-# print(pretty_print(result))
-
-# exit()
-
-# for i in range(10):
-#     result = algo.train()
-#     print(pretty_print(result))
-#     if i % 5 == 0:
-#         checkpoint_dir = algo.save()
-#         print(f"checkpoint saved in directory {checkpoint_dir}")
-
-# exit()
-
-
-# Start a new instance of Ray (when running this locally) or
-# connect to an already running one (when running this through Anyscale).
+# Start a new instance of Ray
 ray.init()
 
-# # Register custom environment
+
+# Register custom environment; used in algo config
 register_env("fire_drones", lambda env_config: FireDronesEnv(env_config))
-# forced_multi = make_multi_agent("fire_drones")
 
 # Configure Environment and PPO algorithm
-# config to pass to env class
 env_config = {
     "height": 5,  # grid (forest) size
     "width": 5,
@@ -70,7 +38,7 @@ env_config = {
 
 # First create a PPOConfig and add properties to it, like the environment we want to use,
 # or the resources we want to leverage for training. After we build the algo from its configuration,
-# we can train it for a number of episodes (here 10) and save the resulting policy periodically (here every 5 episodes).
+# we can train it for a number of episodes (# of times algo.train() is called) and save the resulting policy periodically (when also.save() is called).
 algo = (
     PPOConfig()
     .rollouts(num_rollout_workers=0)
@@ -78,11 +46,8 @@ algo = (
     .environment(env="fire_drones", env_config=env_config)
     .build()
 )
-result = algo.train()
 
-exit()
-
-for i in range(10):
+for i in range(20):
     result = algo.train()
     print(pretty_print(result))
     if i % 5 == 0:
@@ -108,7 +73,7 @@ for i in range(10):
 # )
 
 
-# num_rollout_workers: int | None = NotProvided,
+#     num_rollout_workers: int | None = NotProvided,
 #     num_envs_per_worker: int | None = NotProvided,
 #     create_env_on_local_worker: bool | None = NotProvided,
 #     sample_collector: type[SampleCollector] | None = NotProvided,
