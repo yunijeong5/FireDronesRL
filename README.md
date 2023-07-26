@@ -9,6 +9,8 @@ I hope this project can be used as an example MARL project for beginners in MARL
 > **Note**
 > This project used Ray 2.5.1 and Gymnasium 0.26.3. Using other versions (especially Ray) may cause error.
 
+_Edit: Project runs on Ray 2.6.1, with more deprecated warnings_
+
 ## Problem Description
 
 **Environment Initialization and Updates**: 10 by 10 grid. On each cell, a tree grows with probability X, and fire ignites on K trees. At each time stamp, fire spreads to a neighboring (8 surrounding cells) with probability Y.

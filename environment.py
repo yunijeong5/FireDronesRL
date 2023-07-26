@@ -5,10 +5,7 @@ import random, time
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
 ################
-# TODO: Figure out why map changes after 2 render() is called. Seems like init is called once... so why?
-# idk, but it should be fine... Just premature reset.
-
-# Should I use single policy or multi policy? Each agent's task is pretty much the same so single?
+# TODO: Should I use single policy or multi policy? Each agent's task is pretty much the same so single?
 
 ################
 
@@ -18,6 +15,25 @@ PRINT_PROCESS = False
 def my_print(*args, **kwargs):
     if PRINT_PROCESS:
         print(*args, **kwargs)
+
+
+"""
+Any environment in RLlib must follow this required class structure:
+
+class YourEnv(SomeEnvClassToInherit):
+    def __init__(self, env_config):
+        self.action_space = <gymnasium.Space>
+        self.observation_space = <gymnasium.Space>
+    def reset(self, *, seed=None, options=None):
+        return <obs>, <infos>
+    def step(self, action):
+        return <obs>, <reward: float>, <terminated: bool>, <truncated: bool>, <info: dict>
+
+All other class methods are optional. If YourEnv is a MultiAgentEnv, return values of reset and step should be Dict space.
+
+https://gymnasium.farama.org/tutorials/gymnasium_basics/environment_creation/ 
+^ Nice tutorial for creating custom gymnasium environment class
+"""
 
 
 class FireDronesEnv(MultiAgentEnv):
@@ -91,14 +107,11 @@ class FireDronesEnv(MultiAgentEnv):
                 agent_id += 1
 
         # Reward and penalty constants
-        self.TIMESTEP_PENALTY = -1
-        self.EXTINGUISH_REWARD = 0.1
+        self.TIMESTEP_PENALTY = config.get("time_penalty", -1)
+        self.EXTINGUISH_REWARD = config.get("fire_ext_reward", 0.5)
 
     def reset(self, *, seed=None, options=None):
         """Returns initial observation of next episode."""
-        # Call super's `reset()` method to set the np_random with the value of `seed`.
-        # Note: This call to super does NOT return anything.
-        # super().reset(seed=seed)
 
         my_print("🟢 RESET CALLED")
 
@@ -195,8 +208,8 @@ class FireDronesEnv(MultiAgentEnv):
 
         my_print("📢 TERMINATED DICT", terminateds)
 
-        if terminateds["__all__"]:
-            print(rewards)
+        # if terminateds["__all__"]:
+        #     print(rewards)
 
         return (
             observations,
@@ -331,9 +344,3 @@ class FireDronesEnv(MultiAgentEnv):
                 elif status > 2:
                     my_print("⬜", end="")
             my_print()
-
-
-# env = FireDronesEnv()
-# print(env.reset())
-# env.render()
-# observations, rewards, dones, infos = env.step(action={...})
