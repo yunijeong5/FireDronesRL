@@ -4,12 +4,12 @@ FireDrones is a multi-agent reinforcement learning (MARL) project where multiple
 
 ### Motivation
 
-I hope this project can be used as an example MARL project for beginners in MARL or RLlib. RLlib is undergoing active development, and many existing tutorials online does not accurately reflect the latest version of the library and often includes deprecated code that would cause error.
+I hope this project can be used as an example MARL project for beginners in MARL or RLlib. RLlib is undergoing active development, and many existing tutorials online does not accurately reflect the latest version of the library and often includes deprecated code that would cause error. (e.g. Many tutorials don't use the new `ray.rllib.algorithms`)
 
 > **Note**
 > This project used Ray 2.5.1 and Gymnasium 0.26.3. Using other versions (especially Ray) may cause error.
 
-_Edit: Project runs on Ray 2.6.1, with more deprecated warnings_
+_7/25/2023: Project runs on Ray 2.6.1, with more deprecated warnings_
 
 ## Problem Description
 

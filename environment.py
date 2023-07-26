@@ -65,8 +65,7 @@ class FireDronesEnv(MultiAgentEnv):
         # Number of drones
         self.num_agents = config.get("num_agents", 5)
         self._agent_ids = set(range(self.num_agents))
-        self.agent_pos = {}  # agent positions
-        self.agent_rew = {}  # accumulated rewards in this episode
+        self.agent_pos = {}  # agent positions (row, col)
 
         # How far each agents can see
         # 1=3x3 square with agent in the middle, 2=5x5 square with agent in the middle
@@ -108,7 +107,7 @@ class FireDronesEnv(MultiAgentEnv):
 
         # Reward and penalty constants
         self.TIMESTEP_PENALTY = config.get("time_penalty", -1)
-        self.EXTINGUISH_REWARD = config.get("fire_ext_reward", 0.5)
+        self.EXTINGUISH_REWARD = config.get("fire_ext_reward", 1)
 
     def reset(self, *, seed=None, options=None):
         """Returns initial observation of next episode."""
@@ -136,16 +135,12 @@ class FireDronesEnv(MultiAgentEnv):
                 fire_count += 1
                 self.fire_coords.add((r, c))
 
-        # Reset positions and rewards
+        # Reset positions
         self.agent_pos = {}
-        self.agent_rew = {}
 
         for i in range(self.num_agents):
             # all start from the same cell (e.g. drone storage center)
             self.agent_pos[i] = np.array([0, 0])  # upper left is chosen arbitraryly
-
-            # reset rewards
-            self.agent_rew[i] = 0
 
         # Update grid status number
         self.grid[0, 0] += 3 * self.num_agents
@@ -171,14 +166,12 @@ class FireDronesEnv(MultiAgentEnv):
         is_done = self.timesteps >= self.timestep_limit or np.all(self.grid % 3 != 2)
 
         # Update agent positions based on actions
+        rewards = {}
         for agent_id, action in action_dict.items():
-            self._move(agent_id, action)
+            rewards[agent_id] = self._move(agent_id, action)
 
         # Get observation based on new agent positions
         observations = self._get_obs()
-
-        # Rewards are updated in _move()
-        rewards = self.agent_rew.copy()
 
         # Generate a `terminateds` dict (per-agent and total)
         terminateds = dict.fromkeys(range(self.num_agents), is_done)
@@ -207,9 +200,6 @@ class FireDronesEnv(MultiAgentEnv):
         infos = {i: {} for i in range(self.num_agents)}
 
         my_print("📢 TERMINATED DICT", terminateds)
-
-        # if terminateds["__all__"]:
-        #     print(rewards)
 
         return (
             observations,
@@ -276,15 +266,21 @@ class FireDronesEnv(MultiAgentEnv):
     ):
         """
         Moves `agent_id` using given action and update the grid and its reward for the action taken
+        Return the agent's reward gained for this action
         """
 
         # time penalty--longer time to turn off all fire -> lower final reward
-        self.agent_rew[agent_id] += self.TIMESTEP_PENALTY
+        agent_rew = self.TIMESTEP_PENALTY
 
         # Update fire change
-        if action == 4 and self._is_fire(
-            self.grid[self.agent_pos[agent_id][0], self.agent_pos[agent_id][1]]
-        ):  # spray water action
+        if action == 4:
+            # water on non fire cell -> nothing happens
+            if not self._is_fire(
+                self.grid[self.agent_pos[agent_id][0], self.agent_pos[agent_id][1]]
+            ):
+                return agent_rew
+
+            # Fire cell!
             # fire extinguished, no more (burnable) tree in cell
             self.grid[self.agent_pos[agent_id][0], self.agent_pos[agent_id][1]] -= 2
             self.fire_coords.remove(
@@ -292,11 +288,11 @@ class FireDronesEnv(MultiAgentEnv):
             )
 
             # reward for turning off fire
-            self.agent_rew[agent_id] += self.EXTINGUISH_REWARD
+            agent_rew += self.EXTINGUISH_REWARD
             my_print("💧Fire extinguished!")
 
             # No need to move for action 8
-            return
+            return agent_rew
 
         # Update position according to action
         original_r, original_c = self.agent_pos[agent_id][:]
@@ -323,6 +319,8 @@ class FireDronesEnv(MultiAgentEnv):
         self.grid[
             self.agent_pos[agent_id][0], self.agent_pos[agent_id][1]
         ] += 3  # a drome moved into cell
+
+        return agent_rew
 
     def render(self):
         """
