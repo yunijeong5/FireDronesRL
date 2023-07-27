@@ -74,6 +74,9 @@ After running `trainer.py`, follow the steps below:
 2. In that directory, you should see a event.out.... file.
 3. Run `tensorboard --logdir .` and head to https://localhost:6006 in your browser.
 
+View detailed results here: /home/yunijeong/ray_results/PPO
+To visualize your results with TensorBoard, run: `tensorboard --logdir /home/yunijeong/ray_results/PPO`
+
 ## Extending the Project
 
 Here are some additional considerations that can be incoorporated to create more realistic dynamics:

@@ -11,12 +11,6 @@ from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
 PRINT_PROCESS = False
 
-
-def my_print(*args, **kwargs):
-    if PRINT_PROCESS:
-        print(*args, **kwargs)
-
-
 """
 Any environment in RLlib must follow this required class structure:
 
@@ -38,7 +32,6 @@ https://gymnasium.farama.org/tutorials/gymnasium_basics/environment_creation/
 
 class FireDronesEnv(MultiAgentEnv):
     def __init__(self, config=None):
-        my_print("🤖INIT CALLED")
         super().__init__()
 
         config = config or {}
@@ -112,8 +105,6 @@ class FireDronesEnv(MultiAgentEnv):
     def reset(self, *, seed=None, options=None):
         """Returns initial observation of next episode."""
 
-        my_print("🟢 RESET CALLED")
-
         # Reset grid
         self.grid = np.zeros(shape=(self.height, self.width))
 
@@ -149,7 +140,8 @@ class FireDronesEnv(MultiAgentEnv):
         self.timesteps = 0
 
         # Return the initial observation in the new episode.
-        return self._get_obs(), {}  # [obs] [infos]
+        infos = {i: "test in reset" for i in range(self.num_agents)}
+        return self._get_obs(), infos  # [obs] [infos]
 
     def step(self, action_dict: dict):
         """
@@ -158,7 +150,6 @@ class FireDronesEnv(MultiAgentEnv):
         e.g.
         `action_dict={0: action_for_agent0, 1: action_for_agent1, ...}`
         """
-        my_print("🤖 STEP(): ACTION Dict", action_dict)
         # increase time step counter by 1
         self.timesteps += 1
 
@@ -191,15 +182,14 @@ class FireDronesEnv(MultiAgentEnv):
                         if random.uniform(0, 1) <= self.prob_fire_spread:
                             self.grid[nr, nc] += 1
                             self.fire_coords.add((nr, nc))
-                            my_print("🔥 Fire spread!")
 
         # Generate a `truncateds` dict (per-agent and total); same as terminated
         truncateds = terminateds.copy()
 
         # Generate `infos` dict per agent
-        infos = {i: {} for i in range(self.num_agents)}
-
-        my_print("📢 TERMINATED DICT", terminateds)
+        infos = {
+            i: {i: f"test in step, is_done: {is_done}"} for i in range(self.num_agents)
+        }
 
         return (
             observations,
@@ -253,10 +243,10 @@ class FireDronesEnv(MultiAgentEnv):
         """
         obs = {}
         for agent_id, (row, col) in self.agent_pos.items():
-            obs[agent_id] = np.array(self._get_surroundings(row, col), dtype=np.int64)
+            obs[agent_id] = np.array(self._get_surroundings(row, col), dtype=np.int32)
 
-        # my_print("Observation ", obs)
-        self.render()
+        if PRINT_PROCESS:
+            self.render()
         return obs
 
     def _move(
@@ -289,7 +279,6 @@ class FireDronesEnv(MultiAgentEnv):
 
             # reward for turning off fire
             agent_rew += self.EXTINGUISH_REWARD
-            my_print("💧Fire extinguished!")
 
             # No need to move for action 8
             return agent_rew
@@ -329,16 +318,16 @@ class FireDronesEnv(MultiAgentEnv):
 
         # Super simple implementation for quick checks
         # ⬛⬜🟩🟥🌲🔥🤖
-        my_print(self.grid)
+        print(self.grid)
         for r in range(self.height):
             for c in range(self.width):
                 status = self.grid[r][c]
                 if status == 0:
-                    my_print("⬛", end="")
+                    print("⬛", end="")
                 elif status == 1:
-                    my_print("🟩", end="")
+                    print("🟩", end="")
                 elif status == 2:
-                    my_print("🟥", end="")
+                    print("🟥", end="")
                 elif status > 2:
-                    my_print("⬜", end="")
-            my_print()
+                    print("⬜", end="")
+            print()
