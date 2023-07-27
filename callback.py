@@ -20,7 +20,7 @@ class MyCallback(DefaultCallbacks):
         env_index: int,
         **kwargs,
     ):
-        episode.custom_metrics["test"] = episode._last_infos
+        episode.custom_metrics["test"] = episode._last_infos[0]["frac_burnt"]
         print(
             f"🔥HELLOOOOO", episode.custom_metrics
         )  # 🔥HELLOOOOO {'test': {'__common__': {}, 0: {0: 'test in step, is_done: True'}, 1: {1: 'test in step, is_done: True'}, 2: {2: 'test in step, is_done: True'}}}

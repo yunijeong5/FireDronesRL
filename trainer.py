@@ -41,11 +41,12 @@ register_env("fire_drones", lambda env_config: FireDronesEnv(env_config))
 
 # Configure Environment and PPO algorithm
 env_config = {
-    "height": 5,  # grid (forest) size
-    "width": 5,
+    "height": 10,  # grid (forest) size (>= 4)
+    "width": 10,
     "prob_tree_plant": 0.5,  # Probability of each cell being a tree
     "num_fires": 2,  # Fire severity: initial number of trees on fire
-    "prob_fire_spread": 0.1,  # Probability of fire spreading to a negiboring tree
+    "prob_fire_spread_high": 0.5,  # Probability of fire spreading to a negiboring tree in high-spread region
+    "prob_fire_spread_low": 0.05,  # Probability of fire spreading to a negiboring tree in low-spread region
     "timestep_limit": 100,  # End an episode after this many timesteps
     "num_agents": 3,  # Number of drones
     "agents_vision": 2,  # How far can an agent observe. 1=3x3, 2=5x5, etc.

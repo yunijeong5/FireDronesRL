@@ -50,7 +50,16 @@ class FireDronesEnv(MultiAgentEnv):
         self.fire_coords = set()
 
         # Probability of fire spreading to a negiboring tree
-        self.prob_fire_spread = config.get("prob_fire_spread", 0.3)
+        self.prob_fire_spread_high = config.get("prob_fire_spread_high", 0.3)
+        self.prob_fire_spread_low = config.get("prob_fire_spread_low", 0.05)
+        self.prob_fire_spread = np.full(
+            (self.height, self.width), self.prob_fire_spread_low
+        )
+        high_row = self.height // 3
+        high_col = 2 * (self.width // 3)
+        for r in range(high_row, 2 * high_row):
+            for c in range(high_col, self.width):
+                self.prob_fire_spread[r, c] = self.prob_fire_spread_high
 
         # End an episode after this many timesteps
         self.timestep_limit = config.get("timestep_limit", 100)
@@ -67,13 +76,10 @@ class FireDronesEnv(MultiAgentEnv):
         # Action and observation spaces map from agent ids to spacesfor the individual agents.
         ######################################################################################
         # Observation space
-        # observation = location(me) + status(visible cells around me)
+        # observation = location (my_row, my_col) + status (of visible cells around me)
         # Ditched "global view", aka all location of fires, bc state space would explode
-        # location(agents): coordinate on grid--row_pos, col_pos
         # status(neiboring cells): 0=empty, 1=tree, 2=fire, +3 for each drone in the cell (e.g. 6=empty+2 drones; 11: fire+3 drones)
         # Flattened from top-left to bottom-right
-        # possible change chain for each init status:
-        # 0->[0|3], 1->[1|2|4], 2->[0|2|5], 3->[0|3], 4->[1|4|5], 5->[0|2|3|5]
         num_visible_cells = (self.agents_vision * 2 + 1) ** 2
         # 2 + 3 * self.num_agents: largest status number (fire + all agents in this cell);
         # 1: for the case where the cell is out of grid (e.g. when drone is at the grid's edges)
@@ -92,27 +98,34 @@ class FireDronesEnv(MultiAgentEnv):
         self.action_space = Dict({i: Discrete(9) for i in range(self.num_agents)})
 
         self.pos_update_map = {}  # action number : [row change, col change]
-        agent_id = 0
+        action_id = 0
         for i in range(-1, 2):
             for j in range(-1, 2):
-                self.pos_update_map[agent_id] = np.array([i, j])
-                agent_id += 1
+                self.pos_update_map[action_id] = np.array([i, j])
+                action_id += 1
 
         # Reward and penalty constants
         self.TIMESTEP_PENALTY = config.get("time_penalty", -1)
         self.EXTINGUISH_REWARD = config.get("fire_ext_reward", 1)
+
+        # custom performance measure
+        self.num_trees = 0  # constant for each episode
+        self.num_burnt_trees = 0
 
     def reset(self, *, seed=None, options=None):
         """Returns initial observation of next episode."""
 
         # Reset grid
         self.grid = np.zeros(shape=(self.height, self.width))
+        self.num_trees = 0
+        self.num_burnt_trees = 0
 
         # Reset trees: on each cell, trees are planted with `prob_tree_plant`
         for r in range(self.height):
             for c in range(self.width):
                 if random.uniform(0, 1) <= self.prob_tree_plant:
                     self.grid[r, c] = 1
+                    self.num_trees += 1
 
         # Reset fires: `num_fires` unique cells are randomly selected and set on fire
         self.fire_coords = set()  # empty set
@@ -125,6 +138,7 @@ class FireDronesEnv(MultiAgentEnv):
                 self.grid[r, c] += 1
                 fire_count += 1
                 self.fire_coords.add((r, c))
+                self.num_burnt_trees += 1
 
         # Reset positions
         self.agent_pos = {}
@@ -179,17 +193,23 @@ class FireDronesEnv(MultiAgentEnv):
             for nr in neighbor_row:
                 for nc in neighbor_col:
                     if self._is_tree(self.grid[nr, nc]):
-                        if random.uniform(0, 1) <= self.prob_fire_spread:
+                        if random.uniform(0, 1) <= self.prob_fire_spread[nr, nc]:
                             self.grid[nr, nc] += 1
                             self.fire_coords.add((nr, nc))
+                            self.num_burnt_trees += 1
 
         # Generate a `truncateds` dict (per-agent and total); same as terminated
         truncateds = terminateds.copy()
 
         # Generate `infos` dict per agent
-        infos = {
-            i: {i: f"test in step, is_done: {is_done}"} for i in range(self.num_agents)
-        }
+        infos = (
+            {
+                i: {"frac_burnt": self.num_burnt_trees / self.num_trees}
+                for i in range(self.num_agents)
+            }
+            if is_done
+            else {i: {} for i in range(self.num_agents)}
+        )
 
         return (
             observations,
