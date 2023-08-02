@@ -1,6 +1,7 @@
 from gymnasium.spaces import Discrete, MultiDiscrete, Dict
 import numpy as np
 import random, time
+import math
 
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
@@ -55,9 +56,10 @@ class FireDronesEnv(MultiAgentEnv):
         self.prob_fire_spread = np.full(
             (self.height, self.width), self.prob_fire_spread_low
         )
-        high_row = self.height // 3
-        high_col = 2 * (self.width // 3)
-        for r in range(high_row, 2 * high_row):
+        # Set region with higher fire spread probability (a box at the right side of the grid)
+        high_row = self.height / 3
+        high_col = math.floor(2 * self.width / 3)
+        for r in range(math.floor(high_row), math.ceil(2 * high_row)):
             for c in range(high_col, self.width):
                 self.prob_fire_spread[r, c] = self.prob_fire_spread_high
 
