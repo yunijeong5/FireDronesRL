@@ -63,7 +63,7 @@ Such separation eases the problem of learning policies when state transitions ar
     - Agents are expected to tackle the high-fire-spread area first as the learning progresses.
 
 > **Note**
-> Many of the environment parameters are configurable. Please see `env_config` object in `trainer.py` to see all adjustable configuration parameters.
+> Many of the environment parameters are configurable. See `env_config` object in `trainer.py` to view all adjustable configuration parameters.
 
 ## Requirements
 
@@ -72,7 +72,7 @@ This project uses the following libraries:
 -   [Ray RLlib (2.6.1)](https://docs.ray.io/en/latest/rllib/index.html)
 -   [Gymnasium (0.26.3)](https://gymnasium.farama.org/)
 
-To see how to install Anaconda, see [here](https://docs.anaconda.com/free/anaconda/install/).
+To see how to install Anaconda, go [here](https://docs.anaconda.com/free/anaconda/install/).
 
 ### Install requirements from scratch
 
