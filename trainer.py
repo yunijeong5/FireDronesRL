@@ -32,7 +32,7 @@ env_config = {
     "prob_fire_spread_low": 0.05,  # Probability of fire spreading to a negiboring tree in low-spread region
     "timestep_limit": 100,  # End an episode after this many timesteps
     "num_agents": 10,  # Number of drones
-    "agents_vision": 1,  # How far can an agent observe. 1=3x3, 2=5x5, etc.
+    "agents_vision": 1,  # How far can an agent observe. 1=3x3, 2=5x5, etc. >= 1
     "time_penalty": -1,
     "fire_ext_reward": 1,
     "do_render": True,

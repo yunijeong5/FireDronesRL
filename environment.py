@@ -282,7 +282,9 @@ class FireDronesEnv(MultiAgentEnv):
         """
         obs = {}
         for agent_id, (row, col) in self.agent_pos.items():
-            obs[agent_id] = np.array(self._get_surroundings(row, col), dtype=np.int32)
+            obs[agent_id] = np.array(
+                self._get_surroundings(row, col), dtype=np.int32
+            )  # using int type here is important; one-hot encoding later
 
         return obs
 
