@@ -144,4 +144,4 @@ Here are some additional considerations that can be incoorporated to create more
 
 -   [Example codes found online](./examples/)
 
--   [Ray Summit 2021 tutorial: a bit outdated but explains MultiAgentEnv well](https://github.com/sven1977/rllib_tutorials/blob/main/ray_summit_2021/tutorial_notebook.ipynb)
+-   [Ray Summit 2021 tutorial](https://github.com/sven1977/rllib_tutorials/blob/main/ray_summit_2021/tutorial_notebook.ipynb): a bit outdated but explains MultiAgentEnv well
