@@ -1,9 +1,9 @@
 # FireDronesRL
 
-<figure align='center'>
+<p align='center'>
 <img src="./training_example.gif" width="210" height="210" />
-<figcaption>Pygame visualization of one training episode</figcaption>
-</figure>
+<p align='center'>Pygame visualization of one training episode</p>
+</p>
 
 FireDronesRL is a multi-agent reinforcement learning (MARL) project where multiple agents (drones) are trained to manage wildfire in a 2D grid forest. Drones have local view of grid and collaborate to extinguish the fire quickly.
 
