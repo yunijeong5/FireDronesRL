@@ -2,6 +2,7 @@ from gymnasium.spaces import Discrete, MultiDiscrete, Dict
 import numpy as np
 import random, time
 import math
+import pygame
 
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
@@ -9,8 +10,6 @@ from ray.rllib.env.multi_agent_env import MultiAgentEnv
 # TODO: Should I use single policy or multi policy? Each agent's task is pretty much the same so single?
 
 ################
-
-PRINT_PROCESS = False
 
 """
 Any environment in RLlib must follow this required class structure:
@@ -59,9 +58,11 @@ class FireDronesEnv(MultiAgentEnv):
         # Set region with higher fire spread probability (a box at the right side of the grid)
         high_row = self.height / 3
         high_col = math.floor(2 * self.width / 3)
+        self.high_spread_area = set()
         for r in range(math.floor(high_row), math.ceil(2 * high_row)):
             for c in range(high_col, self.width):
                 self.prob_fire_spread[r, c] = self.prob_fire_spread_high
+                self.high_spread_area.add((r, c))
 
         # End an episode after this many timesteps
         self.timestep_limit = config.get("timestep_limit", 100)
@@ -114,6 +115,13 @@ class FireDronesEnv(MultiAgentEnv):
         self.num_trees = 0  # constant for each episode
         self.num_burnt_trees = 0
 
+        # Rendering variables
+        self.do_render = config.get("do_render", False)
+        self.window = None
+        self.window_size = 512
+        self.clock = None
+        self.fps = 4
+
     def reset(self, *, seed=None, options=None):
         """Returns initial observation of next episode."""
 
@@ -157,6 +165,12 @@ class FireDronesEnv(MultiAgentEnv):
 
         # Return the initial observation in the new episode.
         infos = {i: "test in reset" for i in range(self.num_agents)}
+
+        # New rendering env
+        if self.do_render:
+            self.window = None
+            self.clock = None
+
         return self._get_obs(), infos  # [obs] [infos]
 
     def step(self, action_dict: dict):
@@ -184,10 +198,6 @@ class FireDronesEnv(MultiAgentEnv):
         terminateds = dict.fromkeys(range(self.num_agents), is_done)
         terminateds["__all__"] = is_done
 
-        # TODO: delete later
-        if PRINT_PROCESS:
-            time.sleep(0.5)
-
         # Fire can spread to its neighboring (8) trees with probability `prop_fire_spread`
         for fr, fc in self.fire_coords.copy():
             neighbor_row = self._get_valid_range(fr, 1, True)
@@ -212,6 +222,13 @@ class FireDronesEnv(MultiAgentEnv):
             if is_done
             else {i: {} for i in range(self.num_agents)}
         )
+
+        # render frame
+        if self.do_render:
+            self.render()
+
+        if is_done:
+            self.close()
 
         return (
             observations,
@@ -267,8 +284,6 @@ class FireDronesEnv(MultiAgentEnv):
         for agent_id, (row, col) in self.agent_pos.items():
             obs[agent_id] = np.array(self._get_surroundings(row, col), dtype=np.int32)
 
-        if PRINT_PROCESS:
-            self.render()
         return obs
 
     def _move(
@@ -335,21 +350,107 @@ class FireDronesEnv(MultiAgentEnv):
 
     def render(self):
         """
-        Grid visulaization (pygame?) TODO:
+        Grid visulaization with Pygame
         """
 
-        # Super simple implementation for quick checks
+        # Super simple visualization for quick checks
         # ⬛⬜🟩🟥🌲🔥🤖
-        print(self.grid)
+        # print(self.grid)
+        # for r in range(self.height):
+        #     for c in range(self.width):
+        #         status = self.grid[r][c]
+        #         if status == 0:
+        #             print("⬛", end="")
+        #         elif status == 1:
+        #             print("🟩", end="")
+        #         elif status == 2:
+        #             print("🟥", end="")
+        #         elif status > 2:
+        #             print("⬜", end="")
+        #     print()
+        if self.window is None:
+            pygame.init()
+            pygame.display.init()
+            self.window = pygame.display.set_mode((self.window_size, self.window_size))
+        if self.clock is None:
+            self.clock = pygame.time.Clock()
+
+        canvas = pygame.Surface((self.window_size, self.window_size))
+        canvas.fill((255, 255, 255))
+
+        # size of a single grid cell
+        pix_square_width = self.window_size / self.width
+        pix_square_height = self.window_size / self.height
+
+        # draw fires (red block)
+        for fire in self.fire_coords:
+            pygame.draw.rect(
+                canvas,
+                (255, 0, 0),
+                pygame.Rect(
+                    pix_square_width * np.array(fire),
+                    (pix_square_height, pix_square_width),
+                ),
+            )
+
+        # draw trees (green block) and mark area with high fire spread prob (yellow border).
         for r in range(self.height):
             for c in range(self.width):
-                status = self.grid[r][c]
-                if status == 0:
-                    print("⬛", end="")
-                elif status == 1:
-                    print("🟩", end="")
-                elif status == 2:
-                    print("🟥", end="")
-                elif status > 2:
-                    print("⬜", end="")
-            print()
+                if self._is_tree(self.grid[r, c]):
+                    pygame.draw.rect(
+                        canvas,
+                        (0, 128, 0),
+                        pygame.Rect(
+                            pix_square_width * np.array([r, c]),
+                            (pix_square_height, pix_square_width),
+                        ),
+                    )
+                if (r, c) in self.high_spread_area:
+                    pygame.draw.rect(
+                        canvas,
+                        (255, 255, 0),
+                        pygame.Rect(
+                            pix_square_width * np.array([r, c]),
+                            (pix_square_height, pix_square_width),
+                        ),
+                        width=8,
+                    )
+
+        # draw agents (black circle)
+        for agent in self.agent_pos.values():
+            pygame.draw.circle(
+                canvas,
+                (0, 0, 0),
+                (agent + 0.5) * pix_square_width,
+                pix_square_width / 3,
+            )
+
+        # Add gridlines
+        for x in range(self.width + 1):
+            pygame.draw.line(
+                canvas,
+                0,
+                (0, pix_square_width * x),
+                (self.window_size, pix_square_width * x),
+                width=3,
+            )
+            pygame.draw.line(
+                canvas,
+                0,
+                (pix_square_height * x, 0),
+                (pix_square_height * x, self.window_size),
+                width=3,
+            )
+
+        # Copy our drawings from `canvas` to the visible window
+        self.window.blit(canvas, canvas.get_rect())
+        pygame.event.pump()
+        pygame.display.update()
+
+        # keep framerate stable
+        self.clock.tick(self.fps)
+
+    def close(self):
+        if self.window is not None:
+            pygame.display.quit()
+            pygame.quit()

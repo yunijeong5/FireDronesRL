@@ -6,15 +6,10 @@ This is where the training/learning happens.
 # We use the PPO algorithm here b/c its very flexible wrt its supported
 # action spaces and model types and b/c it learns well almost any problem.
 import ray
-from ray.rllib.algorithms.ppo import (
-    PPOConfig,
-    PPOTorchPolicy,
-)
-from ray.rllib.core.rl_module.rl_module import SingleAgentRLModuleSpec
-from ray.rllib.core.rl_module.marl_module import MultiAgentRLModuleSpec
-from ray.rllib.policy.policy import PolicySpec
+from ray.rllib.algorithms.ppo import PPOConfig, PPOTorchPolicy
 from ray.tune.logger import pretty_print
 from ray.tune.registry import register_env
+from ray.rllib.policy.policy import PolicySpec
 from ray.rllib.examples.policy.random_policy import RandomPolicy
 
 from environment import FireDronesEnv
@@ -40,19 +35,38 @@ env_config = {
     "agents_vision": 1,  # How far can an agent observe. 1=3x3, 2=5x5, etc.
     "time_penalty": -1,
     "fire_ext_reward": 1,
+    "do_render": True,
 }
-"""
-TODO: increase vision, adjust fire extinguish reward, adjust prob_fire_spread, is_done condition
-- vision 2: Didn't do much; slower and increased fluctuation
-- more reward for fire (0.1 -> 1): much better rewards and shorter episode lengths! seems more promising than increasing vision
-"""
 
 # First create a PPOConfig and add properties to it, like the environment we want to use,
 # or the resources we want to leverage for training. After we build the algo from its configuration,
 # we can train it for a number of episodes (# of times algo.train() is called) and save the resulting policy periodically (when also.save() is called).
-env = FireDronesEnv()
+algo_ppo = (
+    PPOConfig()
+    .rollouts(num_rollout_workers=0)
+    .resources(num_gpus=0)
+    .callbacks(CustomMetricCallback)
+    .environment(env="fire_drones", env_config=env_config)
+    .build()
+)
 
-algo = (
+for i in range(100):
+    result = algo_ppo.train()
+    print(pretty_print(result))
+    if i % 5 == 0:
+        checkpoint_dir = algo_ppo.save()
+        print(f"checkpoint saved in directory {checkpoint_dir}")
+
+
+####################################################################################
+# SIMPLE BASELINE TEST: PPO vs. RANDOM
+#
+# Expedient way to run agents with random policy:
+#   Only one of the agents are learning with PPO policy; all others' actions are chosen randomly.
+#   (RLlib has no easy solution for running a "dummy algorithm" that learns nothing at any step and always takes random actions)
+#   (Not having any PPO agent causes error; hence the one lonely PPO robot)
+####################################################################################
+algo_random = (
     PPOConfig()
     .rollouts(num_rollout_workers=0)
     .resources(num_gpus=0)
@@ -61,53 +75,21 @@ algo = (
     .multi_agent(
         policies={
             "ppo": PolicySpec(policy_class=PPOTorchPolicy),
-            "random": PolicySpec(
-                policy_class=RandomPolicy
-            ),  # Simple baseline test: PPO vs Random
+            "random": PolicySpec(policy_class=RandomPolicy),
         },
-        policy_mapping_fn=lambda agent_id, *args, **kwargs: [
-            "ppo",
-            "random",
-        ][agent_id % 2],
+        policy_mapping_fn=lambda agent_id, *args, **kwargs: "random"
+        if agent_id != 0
+        else "ppo",
         policies_to_train=["ppo"],
-    )
-    .rl_module(
-        rl_module_spec=MultiAgentRLModuleSpec(
-            module_specs={
-                "learnable_policy": SingleAgentRLModuleSpec(),
-                "random": SingleAgentRLModuleSpec(module_class=RandomRLModule),
-            }
-        ),
     )
     .build()
 )
 
-# algo = (
-#     AlgorithmConfig(algo_class="PPO")
-#     .rollouts(num_rollout_workers=0)
-#     .resources(num_gpus=0)
-#     .callbacks(CustomMetricCallback)
-#     .environment(env="fire_drones", env_config=env_config)
-#     .multi_agent(
-#         policies={
-#             "ppo_policy": PolicySpec(policy_class=PPOTF1Policy),
-#             "random": PolicySpec(policy_class=RandomPolicy),
-#         },
-#         policy_mapping_fn=lambda agent_id, *args, **kwargs: [
-#             "ppo_policy",
-#             "random",
-#         ][agent_id % 2],
-#         policies_to_train=["ppo_policy"],
-#     )
-#     .build()
-# )
-
-
-for i in range(6):
-    result = algo.train()
+for i in range(100):
+    result = algo_random.train()
     print(pretty_print(result))
     if i % 5 == 0:
-        checkpoint_dir = algo.save()
+        checkpoint_dir = algo_random.save()
         print(f"checkpoint saved in directory {checkpoint_dir}")
 
 

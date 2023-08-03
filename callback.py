@@ -8,21 +8,6 @@ from ray.rllib.algorithms.callbacks import DefaultCallbacks
 from ray.rllib.evaluation.episode_v2 import EpisodeV2
 
 
-from ray.rllib.utils.typing import (
-    AgentID,
-    EnvCreator,
-    EnvType,
-    ModelGradients,
-    ModelWeights,
-    MultiAgentPolicyConfigDict,
-    PartialAlgorithmConfigDict,
-    PolicyID,
-    PolicyState,
-    SampleBatchType,
-    T,
-)
-
-
 class CustomMetricCallback(DefaultCallbacks):
     def on_episode_end(
         self,
@@ -38,3 +23,4 @@ class CustomMetricCallback(DefaultCallbacks):
         episode.custom_metrics["mean_agent_reward"] = episode.total_reward / len(
             episode.agent_rewards
         )
+        # number of extinguished fires
