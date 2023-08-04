@@ -14,7 +14,7 @@ This project aims to be used as an example MARL project for beginners Ray RLlib,
 > **Note**
 > This project used Ray 2.6.1 and Gymnasium 0.26.3. Using other versions (especially Ray) may cause error.
 
-Furthermore, the concept of collaborative agents with local vision chasing potentially dynamic targets can be applied to other related problems, such as capturing wild animals or NPC agents in video games.
+Furthermore, the concept of collaborative agents with local vision chasing potentially dynamic targets can be applied to other related problems, such as capturing wild animals or cleaning up oil spills in the ocean.
 
 ## Problem Description
 
@@ -129,13 +129,12 @@ After running `trainer.py`, follow the steps below:
 
 ## Extending the Project
 
-Here are some additional considerations that can be incoorporated to create more realistic dynamics:
+Here are some additional considerations that can be incorporated to create more realistic dynamics:
 
 -   Total amount of water each drone can spray is less than or equal to its water capacity
 -   Drones must replenish its battery and water
 -   Ensure safety distance between fire and drones
 -   Add environmental factors (e.g. wind affects fire spread direction)
--   Extendable map with custom grid size
 -   etc.
 
 ## Useful Tutorials

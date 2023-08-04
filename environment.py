@@ -6,11 +6,6 @@ import pygame
 
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
-################
-# TODO: Should I use single policy or multi policy? Each agent's task is pretty much the same so single?
-
-################
-
 """
 Any environment in RLlib must follow this required class structure:
 

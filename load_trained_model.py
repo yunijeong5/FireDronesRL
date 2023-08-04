@@ -8,6 +8,7 @@ register_env("fire_drones", lambda env_config: FireDronesEnv(env_config))
 
 # Load saved model
 trained_fd = Algorithm.from_checkpoint(
+    # path to checkpoint file
     "/home/yunijeong/ray_results/PPO_fire_drones_2023-08-02_17-27-29qgv87dnb_random_policy/checkpoint_000096"
 )
 

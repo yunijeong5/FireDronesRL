@@ -28,8 +28,8 @@ env_config = {
     "width": 10,
     "prob_tree_plant": 0.5,  # Probability of each cell being a tree
     "num_fires": 2,  # Fire severity: initial number of trees on fire
-    "prob_fire_spread_high": 0.2,  # Probability of fire spreading to a negiboring tree in high-spread region
-    "prob_fire_spread_low": 0.05,  # Probability of fire spreading to a negiboring tree in low-spread region
+    "prob_fire_spread_high": 0.2,  # Probability of fire spreading to a neighboring tree in high-spread region
+    "prob_fire_spread_low": 0.05,  # Probability of fire spreading to a neighboring tree in low-spread region
     "timestep_limit": 100,  # End an episode after this many timesteps
     "num_agents": 10,  # Number of drones
     "agents_vision": 1,  # How far can an agent observe. 1=3x3, 2=5x5, etc. >= 1
